@@ -1,0 +1,14 @@
+{
+  "name": "ping-pong-goal",
+  "version": "1.0.0",
+  "description": "A retro arcade-style 2D physics game with multiplayer support",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static build complete'",
+    "start": "npx serve ."
+  },
+  "keywords": ["game", "arcade", "retro", "multiplayer", "2d"],
+  "author": "",
+  "license": "MIT"
+}

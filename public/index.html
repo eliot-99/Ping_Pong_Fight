@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Pong Goal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="../src/styles.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <!-- Menu Screen -->
+        <div id="menuScreen" class="screen active">
+            <div class="menu-container">
+                <!-- Animated Characters -->
+                <div class="menu-characters">
+                    <div class="menu-player lefty-bounce">
+                        <div class="spring-leg left"></div>
+                        <div class="spring-leg right"></div>
+                        <div class="fat-body green"></div>
+                        <div class="launcher"></div>
+                        <div class="big-eye"></div>
+                        <div class="big-eye"></div>
+                        <div class="antenna">
+                            <div class="antenna-ball"></div>
+                        </div>
+                        <div class="antenna">
+                            <div class="antenna-ball"></div>
+                        </div>
+                    </div>
+                    <div class="vs-text">VS</div>
+                    <div class="menu-player righty-bounce">
+                        <div class="spring-leg left"></div>
+                        <div class="spring-leg right"></div>
+                        <div class="fat-body purple"></div>
+                        <div class="launcher"></div>
+                        <div class="big-eye"></div>
+                        <div class="big-eye"></div>
+                        <div class="antenna">
+                            <div class="antenna-ball"></div>
+                        </div>
+                        <div class="antenna">
+                            <div class="antenna-ball"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <h1 class="retro-title-glitch">
+                    <span class="glitch" data-text="PING PONG">PING PONG</span>
+                    <br>
+                    <span class="glitch" data-text="GOAL">GOAL</span>
+                </h1>
+
+                <div class="menu-buttons">
+                    <button class="retro-button-shine green" onclick="showDifficultyScreen()">
+                        <span class="btn-icon">🎮</span> PLAY vs COMPUTER
+                    </button>
+                    <button class="retro-button-shine" onclick="showMultiplayerSoon()">
+                        <span class="btn-icon">👥</span> MULTIPLAYER (SOON)
+                    </button>
+                </div>
+
+                <div class="menu-footer">
+                    <p>Press any key to start</p>
+                    <div class="pixel-decoration">◆ ◆ ◆</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generate Room Screen -->
+        <div id="generateScreen" class="screen">
+            <div class="menu-container">
+                <h1 class="retro-title">CREATE ROOM</h1>
+                <div class="slider-container">
+                    <label>GAME TIME: <span id="timeDisplay" class="highlight">10</span> MIN</label>
+                    <input type="range" class="retro-slider" id="timeSlider" min="5" max="15" value="10" oninput="updateTimeDisplay(this.value)">
+                </div>
+                <div class="button-group">
+                    <button class="retro-button-shine green" onclick="generateRoom()">CREATE ROOM</button>
+                    <button class="retro-button-shine" onclick="showMenu()">BACK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Difficulty Selection Screen -->
+        <div id="difficultyScreen" class="screen">
+            <div class="menu-container">
+                <h1 class="retro-title">SELECT DIFFICULTY</h1>
+                <div class="difficulty-buttons">
+                    <button class="retro-button-shine green" onclick="selectDifficulty('easy')">
+                        <span class="btn-icon">🐢</span> EASY
+                    </button>
+                    <button class="retro-button-shine yellow" onclick="selectDifficulty('medium')">
+                        <span class="btn-icon">🏃</span> MEDIUM
+                    </button>
+                    <button class="retro-button-shine red" onclick="selectDifficulty('hard')">
+                        <span class="btn-icon">⚡</span> HARD
+                    </button>
+                </div>
+                <div class="difficulty-info">
+                    <p id="difficultyDescription" class="info-text">Choose your difficulty level!</p>
+                </div>
+                <button class="retro-button-shine" onclick="showMenu()">BACK</button>
+            </div>
+        </div>
+
+        <!-- Single Player Time Selection Screen -->
+        <div id="singlePlayerTimeScreen" class="screen">
+            <div class="menu-container">
+                <h1 class="retro-title">GAME TIME</h1>
+                <div class="slider-container">
+                    <label>GAME TIME: <span id="spTimeDisplay" class="highlight">5</span> MIN</label>
+                    <input type="range" class="retro-slider" id="spTimeSlider" min="1" max="15" value="5" oninput="updateSinglePlayerTime(this.value)">
+                </div>
+                <div class="button-group">
+                    <button class="retro-button-shine green" onclick="startSinglePlayerGame()">START GAME</button>
+                    <button class="retro-button-shine" onclick="showDifficultyScreen()">BACK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Waiting Room Screen (Host) -->
+        <div id="waitingScreen" class="screen">
+            <div class="menu-container">
+                <h1 class="retro-title">ROOM CREATED</h1>
+                <div class="room-code-box">
+                    <p id="roomCodeDisplay" class="code-text">X7K9P2</p>
+                    <div class="scan-line"></div>
+                </div>
+                <p class="success-message">Share this code with your friend!</p>
+                <p class="waiting-text animated">Waiting for opponent<span class="dots"></span></p>
+                <button class="retro-button-shine" onclick="leaveRoom()">CANCEL</button>
+            </div>
+        </div>
+
+        <!-- Enter Room Screen -->
+        <div id="enterRoomScreen" class="screen">
+            <div class="menu-container">
+                <h1 class="retro-title">JOIN ROOM</h1>
+                <div class="input-group">
+                    <input type="text" class="retro-input-large" id="roomCodeInput" placeholder="ROOM CODE" maxlength="6">
+                    <div class="input-underline"></div>
+                </div>
+                <p id="joinMessage" class="message"></p>
+                <div class="button-group">
+                    <button class="retro-button-shine green" onclick="joinRoom()">JOIN</button>
+                    <button class="retro-button-shine" onclick="showMenu()">BACK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="screen">
+            <div class="game-frame">
+                <div class="hud">
+                    <div class="hud-section left">
+                        <div class="hud-icon">🟢</div>
+                        <div class="hud-name">LEFTY</div>
+                        <div class="hud-score" id="leftScore">0</div>
+                    </div>
+                    <div class="hud-section center">
+                        <div class="timer-box">
+                            <div class="hud-timer" id="gameTimer">05:00</div>
+                        </div>
+                    </div>
+                    <div class="hud-section right">
+                        <div class="hud-icon">🟣</div>
+                        <div class="hud-name">RIGHTY</div>
+                        <div class="hud-score" id="rightScore">0</div>
+                    </div>
+                </div>
+                <div class="crt-frame">
+                    <canvas id="gameCanvas"></canvas>
+                    <div id="gameOverOverlay" class="game-over-overlay" style="display: none;">
+                        <div class="overlay-content">
+                            <h1 class="game-over-title">GAME OVER</h1>
+                            <div class="final-scores">
+                                <div class="score-row">
+                                    <span class="label">LEFTY</span>
+                                    <span id="finalLeftScore" class="score green">0</span>
+                                </div>
+                                <div class="score-row">
+                                    <span class="label">RIGHTY</span>
+                                    <span id="finalRightScore" class="score purple">0</span>
+                                </div>
+                            </div>
+                            <p id="winnerText" class="winner-text">LEFTY WINS!</p>
+                            <div class="button-group">
+                                <button class="retro-button-shine green" onclick="playAgain()">PLAY AGAIN</button>
+                                <button class="retro-button-shine" onclick="exitGame()">EXIT</button>
+                            </div>
+                            <p id="playAgainStatus" class="status-text"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="controls-bar">
+                    <div class="control-key"><span>←</span><span>→</span> MOVE</div>
+                    <div class="control-key"><span>SPACE</span> JUMP</div>
+                    <div class="control-key"><span>↑</span><span>↓</span> HOLD AIM • RELEASE SHOOT</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../src/game.js"></script>
+</body>
+</html>
