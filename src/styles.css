@@ -362,7 +362,7 @@ body {
    SHINY BUTTONS - ARCADE STYLE
    ============================================ */
 
-.menu-buttons, .button-group {
+.menu-buttons {
     display: flex;
     flex-direction: column;
     gap: 25px;
@@ -372,10 +372,12 @@ body {
 }
 
 .button-group {
-    flex-direction: row;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    align-items: center;
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 20px;
+    width: 100%;
 }
 
 .retro-button-shine {

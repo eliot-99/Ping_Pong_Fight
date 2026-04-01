@@ -769,27 +769,39 @@ function generateRoom() {
                 const roomData = await api.getRoom(gameState.roomCode);
                 if (roomData && roomData.success && roomData.room) {
                     const right = roomData.room.right;
-                    if (right && right.connected) {
-                        console.log('✓ Guest connected! Starting game...');
+                    if (right && right.connected === true) {
+                        console.log('✓ Guest connected! Preparing to start game...');
                         clearInterval(gameState.roomPolling);
                         
-                        // Update room to mark game as started
-                        await api.updateRoom(gameState.roomCode, { gameStarted: true });
-                        
-                        // Reset game state and start
-                        resetForNewGame();
-                        AudioSys.playGameStart();
-                        startGame();
+                        // Small delay to ensure guest has processed join confirmation
+                        setTimeout(async () => {
+                            // Update room to mark game as started
+                            await api.updateRoom(gameState.roomCode, { gameStarted: true });
+                            console.log('✓ Marked gameStarted=true in room');
+                            
+                            // Another small delay to let guest see the flag
+                            setTimeout(() => {
+                                resetForNewGame();
+                                AudioSys.playGameStart();
+                                startGame();
+                            }, 200);
+                        }, 300);
                     }
                 }
             } catch (e) {
                 console.error('Polling error:', e);
             }
-        }, 500); // Check more frequently
+        }, 500); // Check every 500ms
+    }).catch(err => {
+        console.error('Failed to create room:', err);
+        alert('Failed to create room');
+        showMenu();
     });
 
     window.addEventListener('beforeunload', () => {
-        if (gameState.roomCode) api.deleteRoom(gameState.roomCode);
+        if (gameState.roomCode && gameState.isHost) {
+            api.deleteRoom(gameState.roomCode);
+        }
     });
 }
 
@@ -802,6 +814,9 @@ function joinRoom() {
         msgEl.className = 'message error';
         return;
     }
+
+    msgEl.textContent = 'Connecting...';
+    msgEl.className = 'message';
 
     // Check if room exists via API
     api.getRoom(code).then(result => {
@@ -831,7 +846,7 @@ function joinRoom() {
         msgEl.textContent = 'Joining...';
         msgEl.className = 'message success';
 
-        // Update room to join as right player - merge with existing right data
+        // Update room to join as right player - preserve all other data
         api.updateRoom(code, {
             right: { 
                 ...rightPlayer,
@@ -847,27 +862,56 @@ function joinRoom() {
                 return;
             }
 
-            console.log('✓ Joined room:', code);
-
-            // Poll for game start signal from host
-            gameState.roomPolling = setInterval(async () => {
-                try {
-                    const roomData = await api.getRoom(code);
-                    if (roomData && roomData.success && roomData.room && roomData.room.gameStarted) {
-                        console.log('✓ Host started game!');
-                        clearInterval(gameState.roomPolling);
-                        
-                        resetForNewGame();
-                        AudioSys.playGameStart();
-                        startGame();
+            console.log('✓ Successfully joined room:', code);
+            
+            // Load initial room state NOW, before waiting for game start
+            api.getRoom(code).then(roomData => {
+                if (roomData && roomData.success && roomData.room) {
+                    // Store initial positions from room
+                    if (roomData.room.left) {
+                        localPlayer.x = roomData.room.left.x || CANVAS_WIDTH * 0.15;
+                        localPlayer.y = roomData.room.left.y || (GROUND_Y - PLAYER_HEIGHT - 60);
                     }
-                } catch (e) {
-                    console.error('Polling error:', e);
+                    console.log('✓ Loaded initial room state');
                 }
-            }, 500); // Check more frequently
+                
+                // Show waiting screen
+                showScreen('waitingScreen');
 
-            // Show waiting screen after join is confirmed
-            showScreen('waitingScreen');
+                // NOW poll for game start signal from host
+                gameState.roomPolling = setInterval(async () => {
+                    try {
+                        const roomData = await api.getRoom(code);
+                        if (roomData && roomData.success && roomData.room) {
+                            if (roomData.room.gameStarted === true && !gameState.gameStarted) {
+                                console.log('✓ Host started game!');
+                                clearInterval(gameState.roomPolling);
+                                
+                                resetForNewGame();
+                                AudioSys.playGameStart();
+                                startGame();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Polling error:', e);
+                    }
+                }, 500); // Check every 500ms
+            }).catch(err => {
+                console.error('Failed to load initial room state:', err);
+                msgEl.textContent = 'Connection error!';
+                msgEl.className = 'message error';
+            });
+        }).catch(err => {
+            console.error('Failed to update room:', err);
+            msgEl.textContent = 'Failed to join room!';
+            msgEl.className = 'message error';
+        });
+    }).catch(err => {
+        console.error('Failed to get room:', err);
+        msgEl.textContent = 'Connection error!';
+        msgEl.className = 'message error';
+    });
+}
         });
     });
 }
@@ -999,52 +1043,55 @@ function startGame() {
 
     showScreen('gameScreen');
     
-    // Initialize canvas
-    const canvasInitSuccess = initCanvas();
-    if (!canvasInitSuccess) {
-        console.error('Canvas initialization failed!');
-        alert('Graphics initialization failed');
-        showMenu();
-        return;
-    }
+    // For multiplayer, add delay to ensure DOM is ready (like single player)
+    const delayTime = isSinglePlayer ? 50 : 100;
+    
+    setTimeout(() => {
+        // Initialize canvas
+        const canvasInitSuccess = initCanvas();
+        if (!canvasInitSuccess) {
+            console.error('Canvas initialization failed!');
+            alert('Graphics initialization failed');
+            showMenu();
+            return;
+        }
 
-    const canvas = document.getElementById('gameCanvas');
-    if (!canvas || !canvas.getContext('2d')) {
-        console.error('Canvas context failed!');
-        alert('Graphics initialization failed');
-        showMenu();
-        return;
-    }
+        const canvas = document.getElementById('gameCanvas');
+        if (!canvas || !canvas.getContext('2d')) {
+            console.error('Canvas context failed!');
+            alert('Graphics initialization failed');
+            showMenu();
+            return;
+        }
 
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
 
-    // Reset key states
-    keyState = { up: false, down: false, upPressedTime: 0, downPressedTime: 0 };
+        // Reset key states
+        keyState = { up: false, down: false, upPressedTime: 0, downPressedTime: 0 };
 
-    // Single player mode
-    if (isSinglePlayer) {
-        document.getElementById('leftScore').textContent = '0';
-        document.getElementById('rightScore').textContent = '0';
+        // Single player mode
+        if (isSinglePlayer) {
+            document.getElementById('leftScore').textContent = '0';
+            document.getElementById('rightScore').textContent = '0';
 
-        gameState.timerInterval = setInterval(() => {
-            gameState.remainingTime--;
+            gameState.timerInterval = setInterval(() => {
+                gameState.remainingTime--;
+                updateTimerDisplay();
+                if (gameState.remainingTime <= 0) endGame();
+            }, 1000);
+
             updateTimerDisplay();
-            if (gameState.remainingTime <= 0) endGame();
-        }, 1000);
-
-        updateTimerDisplay();
-        startGameLoop();
-        return;
-    }
+            startGameLoop();
+            return;
+        }
 
     // Multiplayer mode with API-based polling
     document.getElementById('leftScore').textContent = '0';
     document.getElementById('rightScore').textContent = '0';
 
     const opponentSide = gameState.playerId === 'left' ? 'right' : 'left';
-    let lastUpdateTime = 0;
-    const SYNC_INTERVAL = 500; // Sync every 500ms
+    const SYNC_INTERVAL = 400; // Sync every 400ms for better responsiveness
 
     // Timer management
     if (gameState.isHost) {
@@ -1106,9 +1153,9 @@ function startGame() {
                 remotePlayer.targetLauncherAngle = 0;
             }
 
-            if (opponentData.ball) {
+            if (opponentData.ball && opponentData.ball.owner !== gameState.playerId) {
                 remoteBall = opponentData.ball;
-            } else {
+            } else if (!opponentData.ball) {
                 remoteBall = null;
             }
 
@@ -1133,6 +1180,7 @@ function startGame() {
     }, SYNC_INTERVAL);
 
     startGameLoop();
+        }, delayTime);
 }
 
 function startGameLoop() {
