@@ -8,6 +8,9 @@
     "build": "echo 'Static build complete'",
     "start": "npx serve ."
   },
+  "dependencies": {
+    "postgres": "^3.4.3"
+  },
   "keywords": ["game", "arcade", "retro", "multiplayer", "2d"],
   "author": "",
   "license": "MIT"
