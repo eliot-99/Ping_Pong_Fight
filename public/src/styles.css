@@ -1,0 +1,989 @@
+/* ============================================
+   PING PONG GOAL - State of Art Edition
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+    font-family: 'Press Start 2P', cursive;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ============================================
+   SCREEN MANAGEMENT
+   ============================================ */
+
+.screen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* ============================================
+   RETRO MENU WITH ANIMATED CHARACTERS - FIXED
+   ============================================ */
+
+.menu-container {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border: 6px solid #e94560;
+    border-radius: 0;
+    padding: 50px 100px;
+    box-shadow:
+        0 0 0 8px #0f3460,
+        0 0 0 12px #e94560,
+        0 0 60px rgba(233, 69, 96, 0.8),
+        inset 0 0 80px rgba(0,0,0,0.6),
+        inset -4px -4px 0 rgba(0,0,0,0.4),
+        inset 4px 4px 0 rgba(255,255,255,0.1);
+    position: relative;
+    text-align: center;
+}
+
+.menu-container::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #e94560, #0f3460, #e94560, #0f3460);
+    z-index: -1;
+    border-radius: 10px;
+    animation: borderRotate 4s linear infinite;
+    background-size: 400% 400%;
+}
+
+@keyframes borderRotate {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Animated Characters - FIXED */
+
+.menu-characters {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 80px;
+    margin-bottom: 40px;
+    height: 140px;
+}
+
+.menu-player {
+    position: relative;
+    width: 100px;
+    height: 130px;
+}
+
+/* Bounce Animation */
+.lefty-bounce {
+    animation: bouncePlayer 0.9s ease-in-out infinite;
+}
+
+.righty-bounce {
+    animation: bouncePlayer 0.9s ease-in-out infinite 0.45s;
+}
+
+@keyframes bouncePlayer {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+/* Body - Centered and Proper Size */
+.fat-body {
+    position: absolute;
+    width: 80px;
+    height: 75px;
+    border-radius: 40px;
+    top: 25px;
+    left: 10px;
+    z-index: 2;
+    box-shadow:
+        inset -10px -10px 0 rgba(0,0,0,0.3),
+        inset 10px 10px 0 rgba(255,255,255,0.2),
+        0 4px 8px rgba(0,0,0,0.3);
+}
+
+.fat-body.green {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+}
+
+.fat-body.purple {
+    background: linear-gradient(135deg, #c084fc 0%, #a855f7 50%, #7c3aed 100%);
+}
+
+/* Spring Legs - ATTACHED TO BODY */
+.spring-leg {
+    position: absolute;
+    width: 14px;
+    background: repeating-linear-gradient(
+        0deg,
+        #d1d5db 0px,
+        #6b7280 3px,
+        #d1d5db 6px
+    );
+    border: 2px solid #4b5563;
+    border-radius: 7px;
+    z-index: 1;
+    bottom: 0;
+    transform-origin: top center;
+    animation: springBounce 0.9s ease-in-out infinite;
+}
+
+.spring-leg.left {
+    left: 25px;
+    height: 35px;
+}
+
+.spring-leg.right {
+    right: 25px;
+    height: 35px;
+}
+
+.righty-bounce .spring-leg {
+    animation: springBounce 0.9s ease-in-out infinite 0.45s;
+}
+
+@keyframes springBounce {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.65); }
+}
+
+/* Launcher - Positioned on body */
+.menu-player .launcher {
+    position: absolute;
+    width: 24px;
+    height: 30px;
+    background: linear-gradient(180deg, #9ca3af 0%, #4b5563 100%);
+    border: 2px solid #374151;
+    border-radius: 4px;
+    top: 35px;
+    z-index: 3;
+}
+
+.menu-player.lefty-bounce .launcher {
+    left: -8px;
+    transform: scaleX(-1);
+}
+
+.menu-player.righty-bounce .launcher {
+    right: -8px;
+}
+
+/* Eyes - Properly positioned on face */
+.big-eye {
+    position: absolute;
+    width: 22px;
+    height: 26px;
+    background: #fff;
+    border-radius: 50%;
+    border: 3px solid #000;
+    z-index: 4;
+    top: 40px;
+}
+
+.big-eye::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 14px;
+    background: #000;
+    border-radius: 50%;
+    top: 6px;
+    left: 5px;
+    animation: lookAround 2.5s ease-in-out infinite;
+}
+
+@keyframes lookAround {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(4px); }
+    75% { transform: translateX(-2px); }
+}
+
+/* Specific eye positioning */
+.menu-player.lefty-bounce .big-eye:nth-child(5) { left: 18px; }
+.menu-player.lefty-bounce .big-eye:nth-child(6) { right: 18px; }
+.menu-player.righty-bounce .big-eye:nth-child(5) { left: 18px; }
+.menu-player.righty-bounce .big-eye:nth-child(6) { right: 18px; }
+
+/* Antennae - Attached to head */
+.antenna {
+    position: absolute;
+    width: 5px;
+    height: 25px;
+    background: #4b5563;
+    border-radius: 3px;
+    top: 5px;
+    z-index: 1;
+}
+
+.antenna:nth-of-type(7) { left: 25px; transform: rotate(-10deg); }
+.antenna:nth-of-type(8) { right: 25px; transform: rotate(10deg); }
+
+.antenna-ball {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #e94560;
+    border-radius: 50%;
+    top: -8px;
+    left: -4.5px;
+    box-shadow: 0 0 10px #e94560;
+    animation: blinkBall 0.8s ease-in-out infinite;
+}
+
+@keyframes blinkBall {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px #e94560; }
+    50% { opacity: 0.8; transform: scale(1.15); box-shadow: 0 0 20px #e94560; }
+}
+
+/* VS Text */
+.vs-text {
+    font-size: 36px;
+    color: #e94560;
+    text-shadow:
+        3px 3px 0 #000,
+        -2px -2px 0 #fbbf24,
+        0 0 20px rgba(233, 69, 96, 0.8);
+    animation: pulseVS 1.2s ease-in-out infinite;
+    z-index: 10;
+}
+
+@keyframes pulseVS {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); text-shadow: 3px 3px 0 #000, -2px -2px 0 #fbbf24, 0 0 40px rgba(233, 69, 96, 1); }
+}
+
+/* ============================================
+   STANDARD TITLE
+   ============================================ */
+
+.retro-title {
+    font-size: 36px;
+    margin-bottom: 30px;
+    color: #fff;
+    text-shadow:
+        3px 3px 0 #e94560,
+        -2px -2px 0 #0f3460;
+}
+
+/* ============================================
+   GLITCH TITLE EFFECT
+   ============================================ */
+
+.retro-title-glitch {
+    font-size: 44px;
+    margin-bottom: 40px;
+    line-height: 1.4;
+}
+
+.glitch {
+    position: relative;
+    display: inline-block;
+    color: #fff;
+    text-shadow:
+        3px 3px 0 #e94560,
+        -3px -3px 0 #0f3460;
+    animation: glitch 3s infinite;
+}
+
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.glitch::before {
+    color: #e94560;
+    animation: glitch-1 0.3s infinite;
+    clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+    transform: translateX(-3px);
+}
+
+.glitch::after {
+    color: #0f3460;
+    animation: glitch-2 0.3s infinite;
+    clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+    transform: translateX(3px);
+}
+
+@keyframes glitch {
+    0%, 90%, 100% { transform: translate(0); }
+    92% { transform: translate(-3px, 3px); }
+    94% { transform: translate(3px, -3px); }
+    96% { transform: translate(-3px, -3px); }
+    98% { transform: translate(3px, 3px); }
+}
+
+@keyframes glitch-1 {
+    0%, 100% { transform: translateX(-3px); }
+    50% { transform: translateX(3px); }
+}
+
+@keyframes glitch-2 {
+    0%, 100% { transform: translateX(3px); }
+    50% { transform: translateX(-3px); }
+}
+
+/* ============================================
+   SHINY BUTTONS - ARCADE STYLE
+   ============================================ */
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.retro-button-shine {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 14px;
+    padding: 18px 50px;
+    background: linear-gradient(135deg, #ff6b35 0%, #d74e09 50%, #a03a05 100%);
+    border: none;
+    border-top: 4px solid #ffb366;
+    border-left: 4px solid #ffb366;
+    border-right: 4px solid #662200;
+    border-bottom: 4px solid #662200;
+    border-radius: 0;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-shadow: 
+        inset -2px -2px 0 rgba(0,0,0,0.4),
+        inset 2px 2px 0 rgba(255,255,255,0.3),
+        4px 4px 0 rgba(0,0,0,0.5);
+    letter-spacing: 2px;
+    min-width: 250px;
+}
+
+.retro-button-shine::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -100%;
+    width: 100%;
+    height: 200%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,0.2),
+        transparent
+    );
+    transition: left 0.5s;
+}
+
+.retro-button-shine:hover::before {
+    left: 100%;
+}
+
+.retro-button-shine:hover {
+    background: linear-gradient(135deg, #ffb366 0%, #ff8c42 50%, #ff6b35 100%);
+    transform: translateY(-2px);
+    box-shadow: 
+        inset -2px -2px 0 rgba(0,0,0,0.4),
+        inset 2px 2px 0 rgba(255,255,255,0.4),
+        6px 6px 0 rgba(0,0,0,0.6);
+}
+
+.retro-button-shine:active {
+    transform: translateY(2px);
+    box-shadow: 
+        inset -2px -2px 0 rgba(0,0,0,0.6),
+        inset 2px 2px 0 rgba(255,255,255,0.2),
+        2px 2px 0 rgba(0,0,0,0.5);
+}
+
+.retro-button-shine.green {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #15803d 100%);
+    border-top-color: #86efac;
+    border-left-color: #86efac;
+    border-right-color: #0d4a2d;
+    border-bottom-color: #0d4a2d;
+}
+
+.retro-button-shine.green:hover {
+    background: linear-gradient(135deg, #86efac 0%, #4ade80 50%, #22c55e 100%);
+}
+
+.retro-button-shine.yellow {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+    border-top-color: #fcd34d;
+    border-left-color: #fcd34d;
+    border-right-color: #92400e;
+    border-bottom-color: #92400e;
+}
+
+.retro-button-shine.yellow:hover {
+    background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 50%, #f59e0b 100%);
+}
+
+.retro-button-shine.red {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #991b1b 100%);
+    border-top-color: #fca5a5;
+    border-left-color: #fca5a5;
+    border-right-color: #5b1111;
+    border-bottom-color: #5b1111;
+}
+
+.retro-button-shine.red:hover {
+    background: linear-gradient(135deg, #fca5a5 0%, #ef4444 50%, #dc2626 100%);
+}
+
+.difficulty-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+    margin: 30px 0;
+}
+
+.difficulty-info {
+    margin: 20px 0;
+    min-height: 40px;
+}
+
+.info-text {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.btn-icon {
+    font-size: 22px;
+}
+
+/* ============================================
+   SLIDER STYLING
+   ============================================ */
+
+.slider-container {
+    margin: 30px 0;
+    text-align: center;
+}
+
+.slider-container label {
+    font-size: 14px;
+    color: #9ca3af;
+    display: block;
+    margin-bottom: 15px;
+}
+
+.highlight {
+    color: #4ade80;
+    font-size: 20px;
+}
+
+.retro-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    max-width: 400px;
+    height: 20px;
+    background: #1a202c;
+    border: 3px solid #4a5568;
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+}
+
+.retro-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+    border: 3px solid #166534;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* ============================================
+   ROOM CODE DISPLAY
+   ============================================ */
+
+.room-code-box {
+    background: #0a0a0a;
+    border: 3px dashed #4ade80;
+    padding: 30px 60px;
+    margin: 20px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.code-text {
+    font-size: 36px;
+    color: #4ade80;
+    letter-spacing: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.scan-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: rgba(74, 222, 128, 0.5);
+    animation: scan 2s linear infinite;
+}
+
+@keyframes scan {
+    0% { top: 0; }
+    100% { top: 100%; }
+}
+
+.success-message {
+    color: #4ade80;
+    margin-bottom: 20px;
+}
+
+/* ============================================
+   INPUT STYLING
+   ============================================ */
+
+.input-group {
+    position: relative;
+    margin: 30px 0;
+}
+
+.retro-input-large {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 28px;
+    padding: 20px 30px;
+    background: transparent;
+    border: none;
+    border-bottom: 4px solid #4a5568;
+    color: #4ade80;
+    text-align: center;
+    text-transform: uppercase;
+    width: 350px;
+    letter-spacing: 6px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.retro-input-large:focus {
+    border-color: #4ade80;
+}
+
+.input-underline {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 4px;
+    background: #4ade80;
+    transition: width 0.3s, left 0.3s;
+}
+
+.retro-input-large:focus + .input-underline {
+    width: 100%;
+    left: 0;
+}
+
+/* ============================================
+   GAME FRAME - FULL SCREEN
+   ============================================ */
+
+.game-frame {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #0a0a0a;
+    overflow: hidden;
+}
+
+/* ============================================
+   HUD - HEADS UP DISPLAY
+   ============================================ */
+
+.hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    border-bottom: 4px solid #e94560;
+    flex-shrink: 0;
+}
+
+.hud-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.hud-section.left {
+    flex-direction: row;
+}
+
+.hud-section.right {
+    flex-direction: row-reverse;
+}
+
+.hud-section.center {
+    flex-direction: column;
+}
+
+.hud-icon {
+    font-size: 32px;
+    filter: drop-shadow(0 0 10px currentColor);
+}
+
+.hud-name {
+    font-size: 14px;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.hud-score {
+    font-size: 42px;
+    color: #fff;
+    text-shadow:
+        0 0 10px currentColor,
+        3px 3px 0 #000;
+    min-width: 60px;
+    text-align: center;
+}
+
+.hud-section.left .hud-score {
+    color: #4ade80;
+}
+
+.hud-section.right .hud-score {
+    color: #a855f7;
+}
+
+.timer-box {
+    background: #0a0a0a;
+    border: 3px solid #fbbf24;
+    border-radius: 8px;
+    padding: 12px 30px;
+    box-shadow:
+        0 0 20px rgba(251, 191, 36, 0.3),
+        inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+.hud-timer {
+    font-size: 36px;
+    color: #fbbf24;
+    text-shadow:
+        0 0 10px #fbbf24,
+        2px 2px 0 #000;
+}
+
+/* ============================================
+   CRT FRAME FOR CANVAS - FULL SCREEN
+   ============================================ */
+
+.crt-frame {
+    position: relative;
+    flex: 1;
+    background: #000;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.crt-frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        linear-gradient(
+            rgba(18, 16, 16, 0) 50%,
+            rgba(0, 0, 0, 0.15) 50%
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255, 0, 0, 0.03),
+            rgba(0, 255, 0, 0.02),
+            rgba(0, 0, 255, 0.03)
+        );
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* ============================================
+   CONTROLS BAR
+   ============================================ */
+
+.controls-bar {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    padding: 15px;
+    background: #1a1a2e;
+    border-top: 2px solid #333;
+    font-size: 11px;
+    color: #9ca3af;
+    flex-shrink: 0;
+}
+
+.control-key {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.control-key span {
+    display: inline-block;
+    padding: 5px 10px;
+    background: #374151;
+    border-radius: 4px;
+    border: 2px solid #4b5563;
+    color: #fff;
+    font-size: 11px;
+    box-shadow: 0 3px 0 #1f2937;
+}
+
+/* ============================================
+   GAME OVER OVERLAY
+   ============================================ */
+
+.game-over-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.overlay-content {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    border: 4px solid #e94560;
+    border-radius: 8px;
+    padding: 50px 80px;
+    text-align: center;
+    box-shadow:
+        0 0 40px rgba(233, 69, 96, 0.5),
+        inset 0 0 100px rgba(0,0,0,0.5);
+}
+
+.game-over-title {
+    font-size: 48px;
+    color: #e94560;
+    text-shadow:
+        3px 3px 0 #000,
+        0 0 20px #e94560;
+    margin-bottom: 30px;
+}
+
+.final-scores {
+    margin: 30px 0;
+}
+
+.score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 50px;
+    margin: 15px 0;
+    font-size: 20px;
+}
+
+.score-row .label {
+    color: #9ca3af;
+}
+
+.score-row .score {
+    font-size: 32px;
+    text-shadow: 2px 2px 0 #000;
+}
+
+.score.green {
+    color: #4ade80;
+}
+
+.score.purple {
+    color: #a855f7;
+}
+
+.winner-text {
+    font-size: 28px;
+    color: #fbbf24;
+    text-shadow:
+        0 0 20px #fbbf24,
+        2px 2px 0 #000;
+    margin: 20px 0;
+}
+
+.status-text {
+    margin-top: 20px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* ============================================
+   MESSAGES
+   ============================================ */
+
+.message {
+    color: #fbbf24;
+    font-size: 12px;
+    text-align: center;
+    padding: 15px;
+}
+
+.error {
+    color: #ef4444;
+}
+
+.success {
+    color: #4ade80;
+}
+
+/* ============================================
+   MENU FOOTER
+   ============================================ */
+
+.menu-footer {
+    margin-top: 30px;
+    color: #6b7280;
+    font-size: 11px;
+}
+
+.pixel-decoration {
+    margin-top: 15px;
+    color: #e94560;
+    font-size: 16px;
+    animation: pulse 1s infinite;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.waiting-text.animated {
+    animation: pulse 1s infinite;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 1200px) {
+    .menu-container {
+        padding: 30px 50px;
+    }
+
+    .retro-title-glitch {
+        font-size: 36px;
+    }
+}
+
+@media (max-width: 768px) {
+    .menu-container {
+        padding: 25px 30px;
+    }
+
+    .retro-title-glitch {
+        font-size: 28px;
+    }
+
+    .retro-button-shine {
+        font-size: 12px;
+        padding: 15px 30px;
+    }
+
+    .hud {
+        padding: 10px 20px;
+    }
+
+    .hud-score {
+        font-size: 32px;
+    }
+
+    .hud-timer {
+        font-size: 24px;
+    }
+
+    .controls-bar {
+        flex-wrap: wrap;
+        gap: 15px;
+        font-size: 9px;
+    }
+
+    .control-key span {
+        font-size: 9px;
+        padding: 3px 6px;
+    }
+}
