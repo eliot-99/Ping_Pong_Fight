@@ -5,6 +5,9 @@
 // Vercel API Configuration
 const API_BASE = '/api';
 
+// Database reference (null by default, only used for multiplayer via API)
+let database = null;
+
 // Check if running on Vercel (production) or local
 const isVercel = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
 
@@ -286,12 +289,21 @@ let keyState = {
 // ============================================
 function initCanvas() {
     const canvas = document.getElementById('gameCanvas');
+    if (!canvas) {
+        console.error('Canvas element not found!');
+        return false;
+    }
+
     const gameFrame = document.querySelector('.game-frame');
     const crtFrame = document.querySelector('.crt-frame');
 
     // Get the actual displayed size of the game frame
     let width, height;
-    if (gameFrame) {
+    if (crtFrame) {
+        const rect = crtFrame.getBoundingClientRect();
+        width = rect.width;
+        height = rect.height;
+    } else if (gameFrame) {
         const rect = gameFrame.getBoundingClientRect();
         width = rect.width;
         height = rect.height - 140; // Subtract HUD + controls
@@ -300,9 +312,13 @@ function initCanvas() {
         height = window.innerHeight - 140;
     }
 
+    // Ensure minimum size
+    if (width < 400) width = window.innerWidth;
+    if (height < 300) height = window.innerHeight - 140;
+
     // Update dimensions based on actual container size
-    CANVAS_WIDTH = width;
-    CANVAS_HEIGHT = height;
+    CANVAS_WIDTH = Math.max(width, 800);
+    CANVAS_HEIGHT = Math.max(height, 600);
     GROUND_Y = CANVAS_HEIGHT * GROUND_Y_RATIO;
 
     LEFT_MAX_X = CANVAS_WIDTH * 0.36;
@@ -318,10 +334,19 @@ function initCanvas() {
 
     aiState.targetX = CANVAS_WIDTH * 0.85 - PLAYER_WIDTH;
 
-    if (canvas) {
-        canvas.width = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
+    // Critical: Set canvas width/height attributes (not just CSS)
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+
+    // Verify context exists
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error('Failed to get canvas 2D context!');
+        return false;
     }
+
+    ctx.imageSmoothingEnabled = false;
+    return true;
 }
 
 // ============================================
@@ -343,8 +368,7 @@ function showEnterRoom() {
 
 function showMultiplayerSoon() {
     AudioSys.playMenuClick();
-    alert('Multiplayer mode coming soon! Configure Vercel KV and redeploy to enable multiplayer.');
-    showMenu();
+    showScreen('generateScreen');
 }
 
 function showDifficultyScreen() {
@@ -923,12 +947,20 @@ function startGame() {
     showScreen('gameScreen');
 
     const canvas = document.getElementById('gameCanvas');
+    if (!canvas || !canvas.getContext('2d')) {
+        console.error('Canvas initialization failed!');
+        alert('Graphics initialization failed');
+        showMenu();
+        return;
+    }
+
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
     // Reset key states
     keyState = { up: false, down: false, upPressedTime: 0, downPressedTime: 0 };
 
+    // Single player mode
     if (isSinglePlayer) {
         document.getElementById('leftScore').textContent = '0';
         document.getElementById('rightScore').textContent = '0';
@@ -944,91 +976,118 @@ function startGame() {
         return;
     }
 
-    if (!database) {
-        console.error("Cannot start multiplayer game - database not configured");
-        alert("Multiplayer is not available. Please use Single Player mode.");
-        exitGame();
-        return;
-    }
-
-    const roomRef = database.ref(`rooms/${gameState.roomCode}`);
-    roomRef.once('value', (snapshot) => {
-        const room = snapshot.val();
-        birds = room.birds || generateBirds();
-        clouds = room.clouds || generateClouds();
-    });
-
-    if (gameState.isHost) {
-        roomRef.update({ gameStarted: true, gameEnded: false });
-        gameState.timerInterval = setInterval(() => {
-            gameState.remainingTime--;
-            roomRef.child('timer').set(gameState.remainingTime);
-            if (gameState.remainingTime <= 0) endGame();
-        }, 1000);
-    } else {
-        roomRef.child('timer').on('value', (snapshot) => {
-            gameState.remainingTime = snapshot.val() || 0;
-            updateTimerDisplay();
-            if (gameState.remainingTime <= 0 && gameState.gameStarted && !gameState.gameEnded) {
-                endGame();
-            }
-        });
-    }
+    // Multiplayer mode with API-based polling
+    document.getElementById('leftScore').textContent = '0';
+    document.getElementById('rightScore').textContent = '0';
 
     const opponentSide = gameState.playerId === 'left' ? 'right' : 'left';
-    roomRef.child(`${opponentSide}/connected`).on('value', (snapshot) => {
-        if (snapshot.val() === false && gameState.gameStarted && !gameState.gameEnded) {
-            alert('Opponent left the room!');
-            exitGame();
-        }
-    });
+    let lastUpdateTime = 0;
+    const SYNC_INTERVAL = 500; // Sync every 500ms
 
-    roomRef.child(opponentSide).on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            remotePlayer.x = data.x;
-            remotePlayer.y = data.y;
-            remotePlayer.isDead = data.isDead || false;
-            remotePlayer.isAiming = data.isAiming || false;
-            remotePlayer.aimDirection = data.aimDirection || null;
-            if (data.aimDirection) {
-                remotePlayer.targetLauncherAngle = data.aimDirection === 'up' ? -0.6 : 0.6;
+    // Timer management
+    if (gameState.isHost) {
+        gameState.timerInterval = setInterval(() => {
+            gameState.remainingTime--;
+            updateTimerDisplay();
+            
+            // Update room timer
+            api.updateRoom(gameState.roomCode, {
+                timer: gameState.remainingTime,
+                gameEnded: gameState.remainingTime <= 0
+            });
+
+            if (gameState.remainingTime <= 0) {
+                endGame();
+            }
+        }, 1000);
+    } else {
+        // Non-host polls for timer
+        gameState.timerInterval = setInterval(async () => {
+            const result = await api.getRoom(gameState.roomCode);
+            if (result.success && result.room) {
+                gameState.remainingTime = result.room.timer || 0;
+                updateTimerDisplay();
+                
+                if (gameState.remainingTime <= 0 && gameState.gameStarted && !gameState.gameEnded) {
+                    endGame();
+                }
+
+                if (result.room.gameEnded && !gameState.gameEnded) {
+                    endGame();
+                }
+            }
+        }, 1000);
+    }
+
+    updateTimerDisplay();
+
+    // Polling sync for opponent data
+    gameState.syncPolling = setInterval(async () => {
+        if (!gameState.gameStarted || gameState.gameEnded) return;
+
+        const result = await api.getRoom(gameState.roomCode);
+        if (!result.success || !result.room) return;
+
+        const room = result.room;
+        const opponentData = room[opponentSide];
+
+        if (opponentData) {
+            remotePlayer.x = opponentData.x || remotePlayer.x;
+            remotePlayer.y = opponentData.y || remotePlayer.y;
+            remotePlayer.isDead = opponentData.isDead || false;
+            remotePlayer.isAiming = opponentData.isAiming || false;
+            remotePlayer.aimDirection = opponentData.aimDirection || null;
+            
+            if (opponentData.aimDirection) {
+                remotePlayer.targetLauncherAngle = opponentData.aimDirection === 'up' ? -0.6 : 0.6;
             } else {
                 remotePlayer.targetLauncherAngle = 0;
             }
 
-            if (data.ball) {
-                remoteBall = data.ball;
+            if (opponentData.ball) {
+                remoteBall = opponentData.ball;
             } else {
                 remoteBall = null;
             }
 
-            if (data.score !== undefined) {
-                updateScoreDisplay(opponentSide, data.score);
+            // Update scores
+            if (opponentData.score !== undefined) {
+                updateScoreDisplay(opponentSide, opponentData.score);
             }
 
-            if (data.playAgain && !gameState.playAgainVotes[opponentSide]) {
+            // Check play again votes
+            if (opponentData.playAgain && !gameState.playAgainVotes[opponentSide]) {
                 gameState.playAgainVotes[opponentSide] = true;
                 updatePlayAgainStatus();
             }
         }
-    });
 
-    if (!gameState.isHost) {
-        roomRef.child('gameEnded').on('value', (snapshot) => {
-            if (snapshot.val() === true && !gameState.gameEnded) {
-                endGame();
-            }
-        });
-    }
+        // Check if opponent left
+        if (opponentData && opponentData.connected === false && gameState.gameStarted && !gameState.gameEnded) {
+            console.warn('Opponent disconnected');
+            alert('Opponent left the room!');
+            exitGame();
+        }
+    }, SYNC_INTERVAL);
 
-    updateTimerDisplay();
     startGameLoop();
 }
 
 function startGameLoop() {
     const canvas = document.getElementById('gameCanvas');
+    if (!canvas) {
+        console.error('Canvas not found!');
+        showMenu();
+        return;
+    }
+
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error('Failed to get canvas context!');
+        alert('Graphics error: Could not initialize canvas');
+        showMenu();
+        return;
+    }
 
     lastTime = performance.now();
     gameLoop(ctx, canvas);
@@ -1052,7 +1111,7 @@ function gameLoop(ctx, canvas) {
     }
 
     if (!isSinglePlayer) {
-        syncToFirebase();
+        syncToDatabase();
     }
 
     draw(ctx, canvas);
@@ -1395,25 +1454,31 @@ function handleOpponentHit() {
         return;
     }
 
-    if (!database) return;
+    // Update local score immediately
+    const leftScoreEl = document.getElementById('leftScore');
+    const rightScoreEl = document.getElementById('rightScore');
+    
+    if (gameState.playerId === 'left') {
+        leftScoreEl.textContent = parseInt(leftScoreEl.textContent) + 1;
+    } else {
+        rightScoreEl.textContent = parseInt(rightScoreEl.textContent) + 1;
+    }
 
-    const opponentSide = gameState.playerId === 'left' ? 'right' : 'left';
-    const roomRef = database.ref(`rooms/${gameState.roomCode}`);
-    roomRef.child(`${opponentSide}`).update({
-        isDead: true,
-        respawnTime: performance.now() + RESPAWN_TIME
-    });
+    // Update opponent state in database
+    const updateData = {
+        [gameState.playerId === 'left' ? 'left' : 'right']: {
+            score: parseInt(gameState.playerId === 'left' ? leftScoreEl.textContent : rightScoreEl.textContent)
+        }
+    };
 
-    const scorePath = `${gameState.playerId}/score`;
-    roomRef.child(scorePath).transaction((current) => (current || 0) + 1);
+    api.updateRoom(gameState.roomCode, updateData);
 
     localBall = null;
     localPlayer.canLaunch = true;
-    updateScoreDisplay(gameState.playerId, null, true);
 }
 
-function syncToFirebase() {
-    if (!gameState.roomCode || !database) return;
+function syncToDatabase() {
+    if (!gameState.roomCode) return;
 
     const playerData = {
         x: localPlayer.x,
@@ -1421,10 +1486,15 @@ function syncToFirebase() {
         isDead: localPlayer.isDead,
         ball: localBall,
         isAiming: localPlayer.isAiming,
-        aimDirection: localPlayer.aimDirection
+        aimDirection: localPlayer.aimDirection,
+        connected: true
     };
 
-    database.ref(`rooms/${gameState.roomCode}/${gameState.playerId}`).update(playerData);
+    // Merge with opponent data using update
+    const updateData = {};
+    updateData[gameState.playerId] = playerData;
+    
+    api.updateRoom(gameState.roomCode, updateData);
 }
 
 // ============================================
@@ -2010,6 +2080,10 @@ function endGame() {
         clearInterval(gameState.timerInterval);
     }
 
+    if (gameState.syncPolling) {
+        clearInterval(gameState.syncPolling);
+    }
+
     const leftScore = parseInt(document.getElementById('leftScore').textContent);
     const rightScore = parseInt(document.getElementById('rightScore').textContent);
 
@@ -2030,8 +2104,8 @@ function endGame() {
 
     document.getElementById('gameOverOverlay').style.display = 'flex';
 
-    if (gameState.isHost && !isSinglePlayer && database) {
-        database.ref(`rooms/${gameState.roomCode}`).update({ gameEnded: true });
+    if (gameState.isHost && !isSinglePlayer) {
+        api.updateRoom(gameState.roomCode, { gameEnded: true });
     }
 }
 
@@ -2043,15 +2117,12 @@ function playAgain() {
         return;
     }
 
-    if (!database) {
-        console.warn("Multiplayer not available - database not configured");
-        return;
-    }
-
     if (gameState.playAgainVotes[gameState.playerId]) return;
 
     gameState.playAgainVotes[gameState.playerId] = true;
-    database.ref(`rooms/${gameState.roomCode}/${gameState.playerId}`).update({ playAgain: true });
+    api.updateRoom(gameState.roomCode, {
+        [gameState.playerId]: { playAgain: true }
+    });
 
     updatePlayAgainStatus();
     checkBothPlayAgain();
@@ -2075,15 +2146,13 @@ function updatePlayAgainStatus() {
 
 function checkBothPlayAgain() {
     if (gameState.playAgainVotes.left && gameState.playAgainVotes.right) {
-        if (gameState.isHost && database) {
-            database.ref(`rooms/${gameState.roomCode}`).update({
+        if (gameState.isHost) {
+            api.updateRoom(gameState.roomCode, {
                 gameStarted: false,
                 gameEnded: false,
                 timer: gameState.gameTime * 60,
-                'left/score': 0,
-                'left/playAgain': false,
-                'right/score': 0,
-                'right/playAgain': false
+                left: { score: 0, playAgain: false },
+                right: { score: 0, playAgain: false }
             });
 
             setTimeout(() => {
@@ -2124,10 +2193,15 @@ function resetForNewGame() {
 
 function exitGame() {
     AudioSys.playMenuClick();
-    if (gameState.roomCode && database) {
-        const roomRef = database.ref(`rooms/${gameState.roomCode}`);
-        roomRef.child(gameState.playerId).update({ connected: false });
-        roomRef.child(`${gameState.playerId}/playAgain`).set(false);
+    
+    if (gameState.roomCode) {
+        api.updateRoom(gameState.roomCode, {
+            [gameState.playerId]: { connected: false }
+        });
+    }
+
+    if (gameState.syncPolling) {
+        clearInterval(gameState.syncPolling);
     }
 
     resetGameState();
@@ -2150,8 +2224,11 @@ window.addEventListener('keyup', (e) => {
 });
 
 window.addEventListener('beforeunload', () => {
-    if (gameState.roomCode && database) {
-        database.ref(`rooms/${gameState.roomCode}/${gameState.playerId}`).update({ connected: false });
+    if (gameState.roomCode) {
+        api.updateRoom(gameState.roomCode, {
+            [gameState.playerId]: { connected: false }
+        });
+        api.deleteRoom(gameState.roomCode);
     }
 });
 
