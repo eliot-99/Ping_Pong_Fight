@@ -56,8 +56,8 @@
                     <button class="retro-button-shine green" onclick="showDifficultyScreen()">
                         <span class="btn-icon">🎮</span> PLAY vs COMPUTER
                     </button>
-                    <button class="retro-button-shine" onclick="showMultiplayerSoon()">
-                        <span class="btn-icon">👥</span> MULTIPLAYER (SOON)
+                    <button class="retro-button-shine" onclick="showMultiplayerMenu()">
+                        <span class="btn-icon">👥</span> MULTIPLAYER
                     </button>
                 </div>
 
@@ -65,6 +65,22 @@
                     <p>Press any key to start</p>
                     <div class="pixel-decoration">◆ ◆ ◆</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Multiplayer Menu Screen -->
+        <div id="multiplayerMenuScreen" class="screen">
+            <div class="menu-container">
+                <h1 class="retro-title">MULTIPLAYER</h1>
+                <div class="button-group" style="flex-direction: column; margin-top: 40px;">
+                    <button class="retro-button-shine green" onclick="showGenerateRoom()">
+                        <span class="btn-icon">🎯</span> CREATE ROOM
+                    </button>
+                    <button class="retro-button-shine yellow" onclick="showEnterRoom()">
+                        <span class="btn-icon">🔓</span> JOIN ROOM
+                    </button>
+                </div>
+                <button class="retro-button-shine" onclick="showMenu()" style="margin-top: 40px;">BACK</button>
             </div>
         </div>
 

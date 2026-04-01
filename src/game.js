@@ -366,9 +366,9 @@ function showEnterRoom() {
     document.getElementById('roomCodeInput').value = '';
 }
 
-function showMultiplayerSoon() {
+function showMultiplayerMenu() {
     AudioSys.playMenuClick();
-    showScreen('generateScreen');
+    showScreen('multiplayerMenuScreen');
 }
 
 function showDifficultyScreen() {
