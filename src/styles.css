@@ -52,15 +52,17 @@ body {
    ============================================ */
 
 .menu-container {
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    border: 4px solid #e94560;
-    border-radius: 8px;
-    padding: 40px 80px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border: 6px solid #e94560;
+    border-radius: 0;
+    padding: 50px 100px;
     box-shadow:
-        0 0 0 4px #1a1a2e,
-        0 0 0 8px #e94560,
-        0 0 40px rgba(233, 69, 96, 0.5),
-        inset 0 0 100px rgba(0,0,0,0.5);
+        0 0 0 8px #0f3460,
+        0 0 0 12px #e94560,
+        0 0 60px rgba(233, 69, 96, 0.8),
+        inset 0 0 80px rgba(0,0,0,0.6),
+        inset -4px -4px 0 rgba(0,0,0,0.4),
+        inset 4px 4px 0 rgba(255,255,255,0.1);
     position: relative;
     text-align: center;
 }
@@ -357,13 +359,13 @@ body {
 }
 
 /* ============================================
-   SHINY BUTTONS
+   SHINY BUTTONS - ARCADE STYLE
    ============================================ */
 
 .menu-buttons, .button-group {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 25px;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -373,24 +375,36 @@ body {
     flex-direction: row;
     justify-content: center;
     flex-wrap: wrap;
+    gap: 20px;
 }
 
 .retro-button-shine {
     font-family: 'Press Start 2P', cursive;
     font-size: 14px;
-    padding: 20px 45px;
-    background: linear-gradient(180deg, #4a5568 0%, #2d3748 50%, #1a202c 100%);
-    border: 3px solid #718096;
-    border-radius: 4px;
+    padding: 18px 50px;
+    background: linear-gradient(135deg, #ff6b35 0%, #d74e09 50%, #a03a05 100%);
+    border: none;
+    border-top: 4px solid #ffb366;
+    border-left: 4px solid #ffb366;
+    border-right: 4px solid #662200;
+    border-bottom: 4px solid #662200;
+    border-radius: 0;
     color: #fff;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.1s;
     text-transform: uppercase;
     position: relative;
     overflow: hidden;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
+    box-shadow: 
+        inset -2px -2px 0 rgba(0,0,0,0.4),
+        inset 2px 2px 0 rgba(255,255,255,0.3),
+        4px 4px 0 rgba(0,0,0,0.5);
+    letter-spacing: 2px;
+    min-width: 250px;
 }
 
 .retro-button-shine::before {
@@ -403,7 +417,7 @@ body {
     background: linear-gradient(
         90deg,
         transparent,
-        rgba(255,255,255,0.3),
+        rgba(255,255,255,0.2),
         transparent
     );
     transition: left 0.5s;
@@ -414,48 +428,56 @@ body {
 }
 
 .retro-button-shine:hover {
-    background: linear-gradient(180deg, #5a6578 0%, #3d4758 50%, #2a303c 100%);
-    transform: translateY(-3px) scale(1.02);
-    box-shadow:
-        0 6px 0 #1a202c,
-        0 8px 20px rgba(0,0,0,0.4);
+    background: linear-gradient(135deg, #ffb366 0%, #ff8c42 50%, #ff6b35 100%);
+    transform: translateY(-2px);
+    box-shadow: 
+        inset -2px -2px 0 rgba(0,0,0,0.4),
+        inset 2px 2px 0 rgba(255,255,255,0.4),
+        6px 6px 0 rgba(0,0,0,0.6);
 }
 
 .retro-button-shine:active {
     transform: translateY(2px);
-    box-shadow:
-        0 2px 0 #1a202c,
-        0 3px 10px rgba(0,0,0,0.4);
+    box-shadow: 
+        inset -2px -2px 0 rgba(0,0,0,0.6),
+        inset 2px 2px 0 rgba(255,255,255,0.2),
+        2px 2px 0 rgba(0,0,0,0.5);
 }
 
 .retro-button-shine.green {
-    background: linear-gradient(180deg, #22c55e 0%, #15803d 50%, #14532d 100%);
-    border-color: #4ade80;
-    box-shadow: 0 4px 0 #14532d;
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #15803d 100%);
+    border-top-color: #86efac;
+    border-left-color: #86efac;
+    border-right-color: #0d4a2d;
+    border-bottom-color: #0d4a2d;
 }
 
 .retro-button-shine.green:hover {
-    background: linear-gradient(180deg, #4ade80 0%, #22c55e 50%, #166534 100%);
+    background: linear-gradient(135deg, #86efac 0%, #4ade80 50%, #22c55e 100%);
 }
 
 .retro-button-shine.yellow {
-    background: linear-gradient(180deg, #fbbf24 0%, #d97706 50%, #b45309 100%);
-    border-color: #fcd34d;
-    box-shadow: 0 4px 0 #b45309;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+    border-top-color: #fcd34d;
+    border-left-color: #fcd34d;
+    border-right-color: #92400e;
+    border-bottom-color: #92400e;
 }
 
 .retro-button-shine.yellow:hover {
-    background: linear-gradient(180deg, #fcd34d 0%, #fbbf24 50%, #d97706 100%);
+    background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 50%, #f59e0b 100%);
 }
 
 .retro-button-shine.red {
-    background: linear-gradient(180deg, #ef4444 0%, #dc2626 50%, #991b1b 100%);
-    border-color: #f87171;
-    box-shadow: 0 4px 0 #991b1b;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #991b1b 100%);
+    border-top-color: #fca5a5;
+    border-left-color: #fca5a5;
+    border-right-color: #5b1111;
+    border-bottom-color: #5b1111;
 }
 
 .retro-button-shine.red:hover {
-    background: linear-gradient(180deg, #f87171 0%, #ef4444 50%, #dc2626 100%);
+    background: linear-gradient(135deg, #fca5a5 0%, #ef4444 50%, #dc2626 100%);
 }
 
 .difficulty-buttons {
