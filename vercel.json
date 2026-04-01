@@ -1,16 +1,7 @@
 {
+  "buildCommand": "npm run build",
   "public": "public",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
-  ],
-  "routes": [
-    {
-      "src": "/src/(.*)",
-      "dest": "/src/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
   ]
 }
